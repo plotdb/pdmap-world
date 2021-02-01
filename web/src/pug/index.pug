@@ -1,0 +1,22 @@
+doctype html
+html
+  include /../../static/assets/lib/bootstrap.ldui/main/index.pug
+  head
+    +css("/assets/lib/bootstrap/main/css/bootstrap.min.css")
+    +css("/assets/lib/bootstrap.ldui/main/bootstrap.ldui.min.css")
+    +css("/css/index.css")
+  body
+    .w-100.p-4: .d-flex.w-100
+      .flex-grow-1.mx-2: .aspect-ratio.ratio-3by2: svg#root-left.w-100.h-100.border.shadow
+      .flex-grow-1.mx-2: .aspect-ratio.ratio-3by2: svg#root-right.w-100.h-100.border.shadow
+    script(src="https://d3js.org/d3.v4.js")
+    script(src="https://d3js.org/topojson.v2.min.js")
+    script(src="https://d3js.org/d3-color.v1.min.js")
+    script(src="https://d3js.org/d3-interpolate.v1.min.js")
+    script(src="https://d3js.org/d3-scale-chromatic.v1.min.js")
+
+    +script("/assets/lib/proxise/main/proxise.min.js")
+    +script("/assets/lib/@loadingio/ldquery/main/ldq.min.js")
+    +script("/assets/lib/@loadingio/debounce.js/main/debounce.min.js")
+    +script("/assets/lib/pdmap-world/dev/index.min.js")
+    +script("js/index.js")
