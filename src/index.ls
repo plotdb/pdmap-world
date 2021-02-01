@@ -19,6 +19,8 @@ pdmap-world = (opt = {}) ->
   @
 
 pdmap-world.nametypes = <[name alpha2 alpha3 gapminder num shortname]>
+pdmap-world.meta = meta
+pdmap-world.topo = topo
 pdmap-world.prototype = Object.create(Object.prototype) <<< do
   find-country: (n) ->
     if meta.zhalpha2[n] => n = that

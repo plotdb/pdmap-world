@@ -33,6 +33,8 @@
     return this;
   };
   pdmapWorld.nametypes = ['name', 'alpha2', 'alpha3', 'gapminder', 'num', 'shortname'];
+  pdmapWorld.meta = meta;
+  pdmapWorld.topo = topo;
   pdmapWorld.prototype = import$(Object.create(Object.prototype), {
     findCountry: function(n){
       var that, i$, ref$, len$, item, j$, ref1$, len1$, key;
