@@ -67,7 +67,7 @@ There are many ways to identify a country. Here we use following identifiers:
 
 Following is an example to refer some countries with a list, which can be used as `excludes` / `includes` option:
 
-    ["KP", "USA", "Afghanistan", 156, 波希尼亞及赫塞哥維那"]
+    ["KP", "USA", "Afghanistan", 156, "波希尼亞及赫塞哥維那"]
 
 All codes are case insensitive.
 
