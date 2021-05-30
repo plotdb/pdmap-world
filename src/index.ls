@@ -5,7 +5,7 @@ ne = d3.geoNaturalEarth1Raw
 
 pdmap-world = (opt = {}) ->
   @root = if typeof(opt.root) == typeof('') => document.querySelector(opt.root) else opt.root
-  @ <<< {excludes: opt.excludes or [], includes: opt.includes or []}
+  @ <<< {excludes: opt.excludes or <[Antarctica]>, includes: opt.includes or []}
   @ <<< {features: [], path: null, wm: new WeakMap!, countries: []}
   @ <<< opt{popup, padding}
   @projection = d3.geoProjection (x,y) ->
@@ -55,30 +55,29 @@ pdmap-world.prototype = Object.create(Object.prototype) <<< do
 
 
         @path = path = d3.geoPath!.projection @projection
-        node = if root.nodeName.toLowerCase! == \svg => d3.select(root) else d3.select(root).append(\svg)
-        node.append(\g)
+        node = if root.nodeName.toLowerCase! == \svg => d3.select(root)
+        else if root.nodeName.toLowerCase! == \g => d3.select(root)
+        else
+          d3.select(root).append(\svg)
+            ..attr \width, \100%
+            ..attr \height, \100%
+        @g = node.append(\g)
+        @g
           .attr \class, \pdmap-world
-          .selectAll \path
-          .data features
-          .enter!
-            .append \path
-            .attr \d, path
+          .selectAll \path .data features
+            ..exit!remove!
+            ..enter!append \path
+              .attr \d, path
 
-  fit: ->
-    root = @root
-    g = root.querySelector(\g)
-    if root.nodeName.toLowerCase! != \svg =>
-      svg = d3.select(root).select(\svg)
-      svg.attr \width, \100%
-      svg.attr \height, \100%
-    bcr = root.getBoundingClientRect!
-    bbox = g.getBBox!
-    [width,height] = [bcr.width,bcr.height]
-    padding = if @padding? => @padding else 20
+  fit: (rbox) ->
+    rbox = rbox or @root.getBoundingClientRect!
+    bbox = @g.node!getBBox!
+    [width,height] = [rbox.width,rbox.height]
+    padding = if @padding? => @padding else 0
     scale = Math.min((width - 2 * padding) / bbox.width, (height - 2 * padding) / bbox.height)
     [w,h] = [width / 2, height / 2]
-    g.setAttribute(
-      \transform
+    @g.attr(
+      \transform,
       "translate(#w,#h) scale(#scale) translate(#{-bbox.x - bbox.width/2},#{-bbox.y - bbox.height/2})"
     )
 

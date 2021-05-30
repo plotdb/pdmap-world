@@ -2,7 +2,7 @@ world = {}
 
 Promise.resolve!
   .then ->
-    world.left = new pdmap-world root: '#root-left', excludes: [10]
+    world.left = new pdmap-world root: '#root-left'
     world.left.init!
   .then ->
     p = world.left

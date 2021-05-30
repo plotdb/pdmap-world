@@ -2,8 +2,7 @@ var world;
 world = {};
 Promise.resolve().then(function(){
   world.left = new pdmapWorld({
-    root: '#root-left',
-    excludes: [10]
+    root: '#root-left'
   });
   return world.left.init();
 }).then(function(){

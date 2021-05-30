@@ -3,7 +3,7 @@
   "name": "@plotdb/pdmap-world",
   "license": "MIT",
   "description": "World map in D3js and ISO 3166 country code",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "files": [
     "dist/**/*"
   ],
@@ -22,21 +22,21 @@
   },
   "devDependencies": {
     "@loadingio/debounce.js": "^0.0.1",
-    "@loadingio/ldquery": "^1.1.1",
+    "@loadingio/ldquery": "^2.0.0",
     "bootstrap": "^4.5.2",
     "bootstrap.ldui": "github:loadingio/bootstrap.ldui",
     "browserify": "^17.0.0",
     "d3-geo": "^1.11.9",
     "d3-geo-projection": "^2.8.1",
     "deploy": "github:zbryikt/deploy",
-    "fedep": "0.0.12",
+    "fedep": "^0.0.12",
     "livescript": "^1.6.0",
     "ndjson-cli": "^0.3.1",
+    "proxise": "^0.1.2",
     "stylus": "^0.54.5",
-    "template": "github:zbryikt/template#v2.1.10",
+    "template": "github:zbryikt/template#v2.3.13",
     "uglify-js": "=3.2.0",
-    "proxise": "^0.1.1",
-    "uglifycss": "0.0.29"
+    "uglifycss": "^0.0.29"
   },
   "frontendDependencies": {
     "root": "web/static/assets/lib",

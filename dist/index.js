@@ -9,7 +9,7 @@
     this.root = typeof opt.root === typeof ''
       ? document.querySelector(opt.root)
       : opt.root;
-    this.excludes = opt.excludes || [];
+    this.excludes = opt.excludes || ['Antarctica'];
     this.includes = opt.includes || [];
     this.features = [];
     this.path = null;
@@ -62,7 +62,7 @@
         popup: this.popup
       }, root = ref$.root, popup = ref$.popup;
       return Promise.resolve().then(function(){
-        var features, path, node;
+        var features, path, node, x$, y$;
         root.addEventListener('mousemove', function(e){
           var n, data;
           if (!(n = e.target)) {
@@ -124,26 +124,25 @@
         this$.path = path = d3.geoPath().projection(this$.projection);
         node = root.nodeName.toLowerCase() === 'svg'
           ? d3.select(root)
-          : d3.select(root).append('svg');
-        return node.append('g').attr('class', 'pdmap-world').selectAll('path').data(features).enter().append('path').attr('d', path);
+          : root.nodeName.toLowerCase() === 'g'
+            ? d3.select(root)
+            : (x$ = d3.select(root).append('svg'), x$.attr('width', '100%'), x$.attr('height', '100%'), x$);
+        this$.g = node.append('g');
+        y$ = this$.g.attr('class', 'pdmap-world').selectAll('path').data(features);
+        y$.exit().remove();
+        y$.enter().append('path').attr('d', path);
+        return y$;
       });
     },
-    fit: function(){
-      var root, g, svg, bcr, bbox, ref$, width, height, padding, scale, w, h;
-      root = this.root;
-      g = root.querySelector('g');
-      if (root.nodeName.toLowerCase() !== 'svg') {
-        svg = d3.select(root).select('svg');
-        svg.attr('width', '100%');
-        svg.attr('height', '100%');
-      }
-      bcr = root.getBoundingClientRect();
-      bbox = g.getBBox();
-      ref$ = [bcr.width, bcr.height], width = ref$[0], height = ref$[1];
-      padding = this.padding != null ? this.padding : 20;
+    fit: function(rbox){
+      var bbox, ref$, width, height, padding, scale, w, h;
+      rbox = rbox || this.root.getBoundingClientRect();
+      bbox = this.g.node().getBBox();
+      ref$ = [rbox.width, rbox.height], width = ref$[0], height = ref$[1];
+      padding = this.padding != null ? this.padding : 0;
       scale = Math.min((width - 2 * padding) / bbox.width, (height - 2 * padding) / bbox.height);
       ref$ = [width / 2, height / 2], w = ref$[0], h = ref$[1];
-      return g.setAttribute('transform', "translate(" + w + "," + h + ") scale(" + scale + ") translate(" + (-bbox.x - bbox.width / 2) + "," + (-bbox.y - bbox.height / 2) + ")");
+      return this.g.attr('transform', "translate(" + w + "," + h + ") scale(" + scale + ") translate(" + (-bbox.x - bbox.width / 2) + "," + (-bbox.y - bbox.height / 2) + ")");
     },
     set: function(o){
       var k, v, country, results$ = [];
