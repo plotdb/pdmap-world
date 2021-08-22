@@ -1,5 +1,10 @@
 # Change Logs
 
+## v0.0.4
+
+ - add continent information and tools
+
+
 ## v0.0.3
 
  - by default excludes `Antarctica`

@@ -10,6 +10,7 @@ echo "from src to .build ... "
 npx lsc -cp --no-header src/index.ls > .build/index.js
 cp src/meta.json .build/meta.json
 cp src/topo.json .build/topo.json
+cp src/continent.json .build/continent.json
 echo "bundle .build/index.js -> dist/index.js ... "
 npx browserify -s pdmap-world .build/index.js > dist/index.js
 rm -rf .build

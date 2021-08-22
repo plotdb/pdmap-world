@@ -1,5 +1,6 @@
 meta = require "./meta.json"
 topo = require "./topo.json"
+continent = require "./continent.json"
 
 ne = d3.geoNaturalEarth1Raw
 
@@ -21,6 +22,7 @@ pdmap-world = (opt = {}) ->
 pdmap-world.nametypes = <[name alpha2 alpha3 gapminder num shortname]>
 pdmap-world.meta = meta
 pdmap-world.topo = topo
+pdmap-world._continent = continent
 pdmap-world.prototype = Object.create(Object.prototype) <<< do
   find-country: (n) ->
     if meta.zhalpha2[n] => n = that
@@ -98,5 +100,11 @@ pdmap-world.prototype = Object.create(Object.prototype) <<< do
     if @includes.length => @countries.filter ~> it.num in @includes
     else @countries.filter ~> !(it.num in @excludes)
 
-if window? => window.pdmap-world = pdmap-world
+pdmap-world.continent-of = (name) ->
+  for n in pdmap-world.nametypes =>
+    if !~(idx = meta[n].indexOf(name)) => continue
+    return continent.names[continent.map[idx]] or 'unknown'
+  return 'unknown'
+
 if module? => module.exports = pdmap-world
+else if window? => window.pdmap-world = pdmap-world
