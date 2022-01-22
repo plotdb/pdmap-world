@@ -4,6 +4,8 @@
   "license": "MIT",
   "description": "World map in D3js and ISO 3166 country code",
   "version": "0.0.4",
+  "browser": "dist/index.min.js",
+  "main": "dist/index.min.js",
   "files": [
     "dist/**/*"
   ],
