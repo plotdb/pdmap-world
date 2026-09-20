@@ -21,7 +21,7 @@ dorling-defaults =
   radius: {}
 
 tooltip-defaults =
-  enabled: true
+  enabled: false       # opt-in: a host may well draw its own tip from `popup`
   offset: 12           # px between the cursor and the tip box
   class: ''            # extra class on the tip node, for styling
   format: null         # (value, country) -> string

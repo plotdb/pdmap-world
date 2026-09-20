@@ -10,8 +10,9 @@
    - `setDorlingOption(opt)` to toggle switches at runtime; `mode()` (no arg) returns current mode.
    - dorling circles carry the country object as their datum while choropleth paths still carry the topojson feature - use `countryOfDatum(d)` for an accessor that works in both modes.
    - uses global `d3` (v7 bundles d3-force) and `topojson`; no new dependencies.
- - add a built-in **tooltip**: hovering a country shows its name and value, in either mode.
-   - `tooltip` option group: `enabled` ( default on ), `offset`, `class`, `format`, and `accessor` for full control of the content; `setTooltipOption(opt)` to change it at runtime.
+ - add an opt-in **tooltip**: with `{tooltip: true}`, hovering a country shows its name and value, in either mode.
+   - off by default, so hosts already drawing their own tip from `popup` are unaffected.
+   - `tooltip` option group: `enabled`, `offset`, `class`, `format`, and `accessor` for full control of the content; `setTooltipOption(opt)` to change it at runtime.
    - renders a `div.pdmap-tip` on `document.body` with a low-specificity default stylesheet injected once, so page CSS wins.
    - the existing `popup` hook is unchanged.
  - add `countryOfDatum(d)` ( also a static ) to resolve either mode's datum to the country object, and `destroy()` to detach listeners, the tooltip node and the force layout.

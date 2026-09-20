@@ -50,13 +50,17 @@ dorling-opt = ->
 
 Promise.resolve!
   .then ->
-    world.left = new pdmap-world root: '#root-left', dorling: dorling-opt!
+    world.left = new pdmap-world do
+      root: '#root-left'
+      tooltip: true
+      dorling: dorling-opt!
     world.left.init!
   .then ->
     maps.push {p: world.left, scale: d3.interpolateYlGnBu}
     world.right = new pdmap-world do
       root: '#root-right'
       includes: <[china mongolia taiwan japan kr kp]>
+      tooltip: true
       dorling: dorling-opt!
     world.right.init!
   .then ->
@@ -174,6 +178,7 @@ Promise.resolve!
     node = d3.select p.root
 
     ok 'mode() defaults to choropleth', p.mode! == \choropleth, p.mode!
+    ok 'tooltip is off unless asked for', p.tooltip-opt.enabled == false
     for cls in <[.pdmap-basemap .pdmap-choropleth .pdmap-links .pdmap-dorling]>
       ok "layer #cls exists", !node.select(cls).empty!
 
@@ -279,6 +284,7 @@ Promise.resolve!
       root: offscreen-svg \root-test2
       includes: <[china japan taiwan]>
       mode: \dorling
+      tooltip: true
       dorling: {transition: 0}
     world.test2.init!
   .then ->

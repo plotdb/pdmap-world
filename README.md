@@ -61,12 +61,14 @@ country paths will be added under a SVG `g` element with `pdmap-world` class. pd
 
 ## Tooltip
 
-Hovering a country shows a tooltip with its name and value. It is on by default;
-pass `{tooltip: false}` to turn it off, or an object to configure it:
+Hovering a country can show a tooltip with its name and value. It is off by
+default, since a host may well draw its own from `popup`; pass `{tooltip: true}`
+to turn it on, or an object to configure it:
 
-    p = new pdmapWorld({ root: "#root", tooltip: { offset: 16 } })
+    p = new pdmapWorld({ root: "#root", tooltip: true })
+    p = new pdmapWorld({ root: "#root", tooltip: { enabled: true, offset: 16 } })
 
- - `enabled` ( default `true` ).
+ - `enabled` ( default `false` ).
  - `offset` ( default `12` ): px between the cursor and the tip box. The box flips to the other side near a viewport edge.
  - `class`: extra class on the tip node, for styling.
  - `format`: `(value, country) -> string` for the value line. Defaults to `d3.format(',')`.

@@ -65,6 +65,7 @@ dorlingOpt = function(){
 Promise.resolve().then(function(){
   world.left = new pdmapWorld({
     root: '#root-left',
+    tooltip: true,
     dorling: dorlingOpt()
   });
   return world.left.init();
@@ -76,6 +77,7 @@ Promise.resolve().then(function(){
   world.right = new pdmapWorld({
     root: '#root-right',
     includes: ['china', 'mongolia', 'taiwan', 'japan', 'kr', 'kp'],
+    tooltip: true,
     dorling: dorlingOpt()
   });
   return world.right.init();
@@ -245,6 +247,7 @@ Promise.resolve().then(function(){
   p.fit();
   node = d3.select(p.root);
   ok('mode() defaults to choropleth', p.mode() === 'choropleth', p.mode());
+  ok('tooltip is off unless asked for', p.tooltipOpt.enabled === false);
   for (i$ = 0, len$ = (ref$ = ['.pdmap-basemap', '.pdmap-choropleth', '.pdmap-links', '.pdmap-dorling']).length; i$ < len$; ++i$) {
     cls = ref$[i$];
     ok("layer " + cls + " exists", !node.select(cls).empty());
@@ -378,6 +381,7 @@ Promise.resolve().then(function(){
     root: offscreenSvg('root-test2'),
     includes: ['china', 'japan', 'taiwan'],
     mode: 'dorling',
+    tooltip: true,
     dorling: {
       transition: 0
     }

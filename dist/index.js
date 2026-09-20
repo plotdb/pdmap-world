@@ -23,7 +23,7 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
     radius: {}
   };
   tooltipDefaults = {
-    enabled: true,
+    enabled: false,
     offset: 12,
     'class': '',
     format: null,
