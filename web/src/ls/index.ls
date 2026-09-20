@@ -334,6 +334,17 @@ Promise.resolve!
       p.country-of-datum(p.wm.get country) == country
     ok 'countryOfDatum ignores anything else', p.country-of-datum({}) == null
 
+    # targetRadius: the supported way to read what a circle is drawn at
+    r-tw = p.target-radius \tw
+    ok 'targetRadius takes an identifier', r-tw > 0, "#{(r-tw or 0).toFixed 1}"
+    ok 'targetRadius matches the rendered r',
+      Math.abs(r-tw - (radii p).tw) < 1e-9, "#{r-tw} vs #{(radii p).tw}"
+    ok 'targetRadius takes a country object', p.target-radius(country) == p.target-radius(country.alpha2)
+    ok 'targetRadius takes a choropleth datum',
+      p.target-radius(p.wm.get country) == p.target-radius(country)
+    ok 'targetRadius is null for a country with no value', p.target-radius(\fr) == null
+    ok 'targetRadius is null for anything else', p.target-radius({}) == null
+
     hover circle
     tip = p.tip-node
     ok 'hovering a country shows the tooltip', !!(tip and tip.style.display == \block)

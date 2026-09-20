@@ -56,6 +56,7 @@ country paths will be added under a SVG `g` element with `pdmap-world` class. pd
  - `setDorlingOption(opt)`: merge/override dorling options at runtime and refresh ( e.g. toggle `basemap` / `gravity` / `link` ).
  - `setTooltipOption(opt)`: merge/override tooltip options at runtime ( e.g. `{enabled: false}` ).
  - `countryOfDatum(d)`: resolve a d3 datum to its country object, whichever mode it came from. Also available as `pdmapWorld.countryOfDatum(d)`.
+ - `targetRadius(c)`: the radius a country is laid out at, in projection units. Takes a country object, any identifier `findCountry()` accepts, or a datum from either mode; `null` when the country has no value or is not in the layout. Use this rather than reaching into the layout nodes if you want to drive the circles yourself.
  - `destroy()`: stop the force layout and detach the listeners and tooltip node this map added outside its root.
 
 
@@ -118,6 +119,9 @@ apart so they don't overlap. Enable it at construction or at runtime:
    - `maxValue`: the value mapped to the largest radius ( defaults to the maximum of `range()` ).
  - `bounds` ( default `true` ): clamp circles into the map bounding box on every tick, so the layout never spills outside the chart. A circle wider than the box is centered instead.
  - `strength` ( default `0.15` ), `collidePadding` ( default `1.5` ), `transition` ( ms, default `500` ).
+   With `transition: 0` the radii and layer opacities are written straight to the DOM instead of through a
+   zero-length transition, so they land synchronously - useful if something else on the page interferes with
+   d3 transitions, or if you want to animate the circles yourself from `targetRadius()`.
  - style overrides: `basemapFill`, `basemapStroke`, `basemapStrokeWidth`, `linkStroke`, `linkStrokeWidth`.
 
 Requires `d3` **v7** in scope ( it bundles `d3-force`: `forceSimulation` / `forceX` / `forceY` / `forceCollide` )

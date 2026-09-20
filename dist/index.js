@@ -270,6 +270,20 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
         });
       }
     },
+    targetRadius: function(c){
+      var ref$;
+      c = pdmapWorld.countryOfDatum(c) || ((ref$ = typeof c) === 'string' || ref$ === 'number' ? this.findCountry(c) : null);
+      if (!c) {
+        return null;
+      }
+      if (c._node != null && c._node.r != null) {
+        return c._node.r;
+      }
+      if (!(c.value != null) || !this._bounds) {
+        return null;
+      }
+      return this.radiusScale(c.value) || this.buildRadiusScale()(c.value);
+    },
     countryOfDatum: function(d){
       return pdmapWorld.countryOfDatum(d);
     },
@@ -560,9 +574,15 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
       }).attr('cy', function(c){
         return c._node.y;
       }).attr('r', 0).attr('class', 'pdmap-dorling-circle').merge(sel);
-      this.circleSel.transition(tn).duration(t).attr('r', function(c){
-        return c._node.r;
-      });
+      if (t) {
+        this.circleSel.transition(tn).duration(t).attr('r', function(c){
+          return c._node.r;
+        });
+      } else {
+        this.circleSel.attr('r', function(c){
+          return c._node.r;
+        });
+      }
       lsel = this.linkLayer.selectAll('line').data(list, function(c){
         return c.num;
       });
@@ -600,28 +620,31 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
         return d.r + o.collidePadding;
       }).strength(0.85).iterations(2)).on('tick', this._ticked).alpha(1).restart();
     },
+    fade: function(sel, t, v){
+      if (!sel) {
+        return;
+      }
+      if (t) {
+        return sel.transition(tn).duration(t).style('opacity', v);
+      } else {
+        return sel.style('opacity', v);
+      }
+    },
     applyMode: function(animate){
-      var d, t, x$, y$;
+      var d, t;
       if (!this.g) {
         return;
       }
       d = this._mode === 'dorling';
       t = animate && this.dorlingOpt.transition ? this.dorlingOpt.transition : 0;
-      x$ = this.layer;
-      x$.style('pointer-events', d ? 'none' : 'auto');
-      x$.transition(tn).duration(t).style('opacity', d ? 0 : 1);
-      if (this.basemapLayer) {
-        this.basemapLayer.transition(tn).duration(t).style('opacity', d && this.dorlingOpt.basemap ? 1 : 0);
-      }
-      if (this.linkLayer) {
-        this.linkLayer.transition(tn).duration(t).style('opacity', d && this.dorlingOpt.link ? 1 : 0);
-      }
+      this.layer.style('pointer-events', d ? 'none' : 'auto');
+      this.fade(this.layer, t, d ? 0 : 1);
+      this.fade(this.basemapLayer, t, d && this.dorlingOpt.basemap ? 1 : 0);
+      this.fade(this.linkLayer, t, d && this.dorlingOpt.link ? 1 : 0);
       if (this.dorlingLayer) {
-        y$ = this.dorlingLayer;
-        y$.style('pointer-events', d ? 'auto' : 'none');
-        y$.transition(tn).duration(t).style('opacity', d ? 1 : 0);
-        return y$;
+        this.dorlingLayer.style('pointer-events', d ? 'auto' : 'none');
       }
+      return this.fade(this.dorlingLayer, t, d ? 1 : 0);
     }
   });
   pdmapWorld.countryOfDatum = function(d){

@@ -2,6 +2,11 @@
 
 ## v0.0.7
 
+ - add `targetRadius(c)`: the radius a country is laid out at, in projection units. Takes a country object,
+   any `findCountry()` identifier, or a datum from either mode. A supported way to drive the circles yourself
+   without reaching into the layout nodes.
+ - `dorling.transition: 0` now writes radii and layer opacities straight to the DOM instead of going through a
+   zero-length transition, so they land synchronously rather than a frame later.
  - fix: dorling radii could stay stale after `set()` **when the host runs its own transition on the circles**. every transition the library owns is now named ( `pdmap` ).
    d3 cancels a *pending* transition when another one with the same name is scheduled on the element, so a host
    painting the circles with its own `selectAll('circle').transition().attr('fill', ...)` right after `set()`

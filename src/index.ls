@@ -181,6 +181,17 @@ pdmap-world.prototype = Object.create(Object.prototype) <<< do
     if @includes.length => @countries.filter ~> it.num in @includes
     else @countries.filter ~> !(it.num in @excludes)
 
+  # the radius this country is laid out at, in projection units. accepts a
+  # country object, any identifier `findCountry` takes, or a datum from either
+  # mode. null when it has no value / is not in the layout.
+  target-radius: (c) ->
+    c = pdmap-world.country-of-datum(c) or
+      (if typeof(c) in <[string number]> => @find-country c else null)
+    if !c => return null
+    if c._node? and c._node.r? => return c._node.r
+    if !(c.value?) or !@_bounds => return null
+    (@radius-scale or @build-radius-scale!) c.value
+
   # ---- tooltip -------------------------------------------------------------
 
   # choropleth <path> carries the topojson feature while dorling <circle>
@@ -390,7 +401,8 @@ pdmap-world.prototype = Object.create(Object.prototype) <<< do
       .attr \r, 0
       .attr \class, \pdmap-dorling-circle
       .merge sel
-    @circle-sel.transition(tn).duration(t).attr \r, (c) -> c._node.r
+    if t => @circle-sel.transition(tn).duration(t).attr \r, (c) -> c._node.r
+    else @circle-sel.attr \r, (c) -> c._node.r
 
     # relation lines from circle center to geographic centroid
     lsel = @link-layer.selectAll(\line).data(list, (c) -> c.num)
@@ -422,21 +434,21 @@ pdmap-world.prototype = Object.create(Object.prototype) <<< do
       .on \tick, @_ticked
       .alpha 1 .restart!
 
+  fade: (sel, t, v) ->
+    if !sel => return
+    if t => sel.transition(tn).duration(t).style \opacity, v
+    else sel.style \opacity, v
+
   apply-mode: (animate) ->
     if !@g => return
     d = @_mode == \dorling
     t = if animate and @dorling-opt.transition => @dorling-opt.transition else 0
-    @layer
-      ..style \pointer-events, (if d => \none else \auto)
-      ..transition(tn).duration(t).style \opacity, (if d => 0 else 1)
-    if @basemap-layer =>
-      @basemap-layer.transition(tn).duration(t).style \opacity, (if (d and @dorling-opt.basemap) => 1 else 0)
-    if @link-layer =>
-      @link-layer.transition(tn).duration(t).style \opacity, (if (d and @dorling-opt.link) => 1 else 0)
-    if @dorling-layer =>
-      @dorling-layer
-        ..style \pointer-events, (if d => \auto else \none)
-        ..transition(tn).duration(t).style \opacity, (if d => 1 else 0)
+    @layer.style \pointer-events, (if d => \none else \auto)
+    @fade @layer, t, (if d => 0 else 1)
+    @fade @basemap-layer, t, (if (d and @dorling-opt.basemap) => 1 else 0)
+    @fade @link-layer, t, (if (d and @dorling-opt.link) => 1 else 0)
+    if @dorling-layer => @dorling-layer.style \pointer-events, (if d => \auto else \none)
+    @fade @dorling-layer, t, (if d => 1 else 0)
 
 pdmap-world.country-of-datum = (d) ->
   if !d => return null

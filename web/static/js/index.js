@@ -416,7 +416,7 @@ Promise.resolve().then(function(){
   });
   return world.test2.init();
 }).then(function(){
-  var p, circle, country, hover, tip, ref$;
+  var p, circle, country, hover, rTw, tip, ref$;
   p = world.test2;
   p.fit();
   ok('constructor {mode} needs no mode() call', p.mode() === 'dorling', p.mode());
@@ -444,6 +444,13 @@ Promise.resolve().then(function(){
   ok('countryOfDatum resolves a dorling circle datum', p.countryOfDatum(country) === country);
   ok('countryOfDatum resolves a choropleth path datum', p.countryOfDatum(p.wm.get(country)) === country);
   ok('countryOfDatum ignores anything else', p.countryOfDatum({}) === null);
+  rTw = p.targetRadius('tw');
+  ok('targetRadius takes an identifier', rTw > 0, (rTw || 0).toFixed(1) + "");
+  ok('targetRadius matches the rendered r', Math.abs(rTw - radii(p).tw) < 1e-9, rTw + " vs " + radii(p).tw);
+  ok('targetRadius takes a country object', p.targetRadius(country) === p.targetRadius(country.alpha2));
+  ok('targetRadius takes a choropleth datum', p.targetRadius(p.wm.get(country)) === p.targetRadius(country));
+  ok('targetRadius is null for a country with no value', p.targetRadius('fr') === null);
+  ok('targetRadius is null for anything else', p.targetRadius({}) === null);
   hover(circle);
   tip = p.tipNode;
   ok('hovering a country shows the tooltip', !!(tip && tip.style.display === 'block'));
