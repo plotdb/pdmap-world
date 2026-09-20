@@ -52,6 +52,35 @@ country paths will be added under a SVG `g` element with `pdmap-world` class. pd
  - `allCountries()`: get a list of all countries.
  - `fit()`: fix map to size of container.
  - `findCountry(n)`: return a country object according to country identifier `n` ( see below )
+ - `mode([m][, {animate}])`: with no argument, returns the current mode; with `'dorling'` or `'choropleth'`, switches mode ( transition unless `{animate:false}` ).
+ - `setDorlingOption(opt)`: merge/override dorling options at runtime and refresh ( e.g. toggle `basemap` / `gravity` / `link` ).
+
+## Dorling cartogram
+
+In `dorling` mode each country becomes a **circle** whose area is scaled from the value
+given via `set()` ( a `sqrt` radius scale by default ), and `d3-force` pushes the circles
+apart so they don't overlap. Enable it at construction or at runtime:
+
+    p = new pdmapWorld({ root: "#root", mode: "dorling", dorling: { ... } })
+    // or later:
+    p.mode("dorling")   // p.mode("choropleth") to switch back; p.mode() to read
+
+`dorling` options ( all optional ):
+
+ - `basemap` ( default `true` ): draw a light, non-colored country outline layer as a geographic reference.
+ - `gravity` ( default `'centroid'` ): `'centroid'` pulls each circle toward its own geographic centroid ( in current projection pixels ); `'center'` pulls all circles toward the screen center.
+ - `link` ( default `false` ): draw a thin line from each circle back to its geographic centroid ( shows where the circle "came from" ).
+ - `radius`: `{ auto, fillRatio, max, maxValue }`, or a function `value -> radius` to fully override the scale.
+   - `auto` ( default `true` ): derive the largest radius from how much room the map actually has, instead of a fixed number. The circles are sized so that together they cover `fillRatio` of the map bounding box, which keeps the layout from overflowing when the values or the set of countries change.
+   - `fillRatio` ( default `0.4` ): that share. Lower means smaller circles - less overlap, more empty space; higher means the opposite. This is the knob to trade overlap against crowding.
+   - `max`: with `auto` on this is only an upper bound ( a hint ); with `auto` off it is the largest radius, verbatim.
+   - `maxValue`: the value mapped to the largest radius ( defaults to the maximum of `range()` ).
+ - `bounds` ( default `true` ): clamp circles into the map bounding box on every tick, so the layout never spills outside the chart. A circle wider than the box is centered instead.
+ - `strength` ( default `0.15` ), `collidePadding` ( default `1.5` ), `transition` ( ms, default `500` ).
+ - style overrides: `basemapFill`, `basemapStroke`, `basemapStrokeWidth`, `linkStroke`, `linkStrokeWidth`.
+
+Requires `d3` **v7** in scope ( it bundles `d3-force`: `forceSimulation` / `forceX` / `forceY` / `forceCollide` )
+plus global `topojson`. See `web/` for a demo of both modes with every switch wired up.
 
 
 ## Country Identifiers

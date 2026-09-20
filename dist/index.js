@@ -2,11 +2,26 @@
 module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5,0,1,0,3,1,0,3,5,3,5,3,0,3,6,0,0,0,0,6,3,3,3,3,4,5,1,5,0,1,3,1,5,5,6,5,3,3,3,1,1,6,2,4,1,1,1,6,4,2,3,3,0,3,0,1,3,1,4,1,5,5,5,4,5,3,6,5,2,1,5,0,1,1,0,0,0,0,1,0,1,3,5,0,0,0,3,0,0,0,0,0,0,3,1,3,3,1,1,1,0,3,3,0,0,3,1,5,3,3,5,1,0,1,1,5,3,3,0,3,4,0,1,5,5,5,5,4,4,4,5,3,3,4,4,1,4,5,4,4,4,0,5,4,6,6,0,4,1,1,3,0,5,0,3,1,0,3,5,3,5,5,5,5,5,5,1,3,0,3,1,3,3,0,1,0,1,3,3,3,1,3,3,3,6,1,3,1,1,0,0,0,3,4,4,5,0,3,0,0,5,4,3,1,1,3,1,1,1,1,3,5,5,3,6,0,6,4,4,0,3],"names":["Asia","Europe","Antarctica","Africa","Oceania","North America","South America"],"zh":["亞洲","歐洲","南極洲","非洲","大洋洲","北美洲","南美洲"]}
 },{}],2:[function(require,module,exports){
 (function(){
-  var meta, topo, continent, ne, pdmapWorld;
+  var meta, topo, continent, ne, dorlingDefaults, pdmapWorld;
   meta = require("./meta.json");
   topo = require("./topo.json");
   continent = require("./continent.json");
   ne = d3.geoNaturalEarth1Raw;
+  dorlingDefaults = {
+    basemap: true,
+    gravity: 'centroid',
+    link: false,
+    strength: 0.15,
+    collidePadding: 1.5,
+    transition: 500,
+    basemapFill: '#e6e6e6',
+    basemapStroke: '#cccccc',
+    basemapStrokeWidth: 0.3,
+    linkStroke: '#999999',
+    linkStrokeWidth: 0.4,
+    bounds: true,
+    radius: {}
+  };
   pdmapWorld = function(opt){
     opt == null && (opt = {});
     this.root = typeof opt.root === typeof ''
@@ -20,6 +35,8 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
     this.countries = [];
     this.popup = opt.popup;
     this.padding = opt.padding;
+    this._mode = opt.mode || 'choropleth';
+    this.dorlingOpt = import$(import$({}, dorlingDefaults), opt.dorling || {});
     this.projection = d3.geoProjection(function(x, y){
       var lat, lng;
       lat = y * 180 / Math.PI;
@@ -66,7 +83,7 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
         popup: this.popup
       }, root = ref$.root, popup = ref$.popup;
       return Promise.resolve().then(function(){
-        var features, path, node, x$, y$;
+        var features, path, node, x$, y$, b, ref$, bw, bh;
         root.addEventListener('mousemove', function(e){
           var n, data;
           if (!(n = e.target)) {
@@ -132,10 +149,51 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
             ? d3.select(root)
             : (x$ = d3.select(root).append('svg'), x$.attr('width', '100%'), x$.attr('height', '100%'), x$);
         this$.g = node.append('g');
-        y$ = this$.g.attr('class', 'pdmap-world').selectAll('path').data(features);
+        this$.g.attr('class', 'pdmap-world');
+        this$.basemapLayer = this$.g.append('g').attr('class', 'pdmap-basemap').style('opacity', 0);
+        this$.layer = this$.g.append('g').attr('class', 'pdmap-choropleth');
+        this$.linkLayer = this$.g.append('g').attr('class', 'pdmap-links').style('opacity', 0);
+        this$.dorlingLayer = this$.g.append('g').attr('class', 'pdmap-dorling').style('opacity', 0).style('pointer-events', 'none');
+        y$ = this$.layer.selectAll('path').data(features);
         y$.exit().remove();
         y$.enter().append('path').attr('d', path);
-        return y$;
+        features.map(function(f){
+          return f.properties.geocenter = this$.path.centroid(f);
+        });
+        b = this$.path.bounds({
+          type: 'FeatureCollection',
+          features: features
+        });
+        this$._bounds = b;
+        this$._center = [(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2];
+        ref$ = [b[1][0] - b[0][0], b[1][1] - b[0][1]], bw = ref$[0], bh = ref$[1];
+        this$._defaultMaxR = Math.min(bw, bh) / 12;
+        this$._ticked = function(){
+          if (this$.dorlingOpt.bounds) {
+            this$.clampNodes();
+          }
+          if (this$.circleSel) {
+            this$.circleSel.attr('cx', function(c){
+              return c._node.x;
+            }).attr('cy', function(c){
+              return c._node.y;
+            });
+          }
+          if (this$.dorlingOpt.link && this$.linkSel) {
+            return this$.linkSel.attr('x1', function(c){
+              return c._node.x;
+            }).attr('y1', function(c){
+              return c._node.y;
+            });
+          }
+        };
+        if (this$._mode === 'dorling') {
+          return this$.mode('dorling', {
+            animate: false
+          });
+        } else {
+          return this$.applyMode(false);
+        }
       });
     },
     fit: function(rbox){
@@ -149,7 +207,7 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
       return this.g.attr('transform', "translate(" + w + "," + h + ") scale(" + scale + ") translate(" + (-bbox.x - bbox.width / 2) + "," + (-bbox.y - bbox.height / 2) + ")");
     },
     set: function(o){
-      var k, v, country, results$ = [];
+      var k, v, country;
       o == null && (o = {});
       for (k in o) {
         v = o[k];
@@ -157,9 +215,13 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
         if (!country) {
           continue;
         }
-        results$.push(country.value = v);
+        country.value = v;
       }
-      return results$;
+      if (this._mode === 'dorling' && this._dorlingReady) {
+        this.updateDorling();
+        this.startSim();
+      }
+      return this;
     },
     range: function(){
       var ref$, min, max, i$, len$, c, v;
@@ -186,6 +248,238 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
         return this.countries.filter(function(it){
           return !in$(it.num, this$.excludes);
         });
+      }
+    },
+    mode: function(m, opt){
+      var animate;
+      opt == null && (opt = {});
+      if (!(m != null)) {
+        return this._mode;
+      }
+      if (m !== 'dorling' && m !== 'choropleth') {
+        return this;
+      }
+      animate = opt.animate != null ? opt.animate : true;
+      this._mode = m;
+      if (!this.g) {
+        return this;
+      }
+      if (m === 'dorling') {
+        this.setupDorling();
+        this.updateDorling();
+        this.startSim();
+      } else if (this.sim) {
+        this.sim.stop();
+      }
+      this.applyMode(animate);
+      return this;
+    },
+    setDorlingOption: function(o){
+      o == null && (o = {});
+      this.dorlingOpt = import$(import$({}, this.dorlingOpt), o);
+      if (this.basemapLayer) {
+        this.basemapLayer.selectAll('path').attr('fill', this.dorlingOpt.basemapFill).attr('stroke', this.dorlingOpt.basemapStroke);
+      }
+      if (this._mode === 'dorling' && this._dorlingReady) {
+        this.updateDorling();
+        this.startSim();
+        this.applyMode(false);
+      }
+      return this;
+    },
+    clampNodes: function(){
+      var ref$, ref1$, x0, y0, x1, y1, i$, len$, n;
+      if (!(this._nodes && this._bounds)) {
+        return;
+      }
+      ref$ = this._bounds, ref1$ = ref$[0], x0 = ref1$[0], y0 = ref1$[1], ref1$ = ref$[1], x1 = ref1$[0], y1 = ref1$[1];
+      for (i$ = 0, len$ = (ref$ = this._nodes).length; i$ < len$; ++i$) {
+        n = ref$[i$];
+        if (x1 - x0 <= 2 * n.r) {
+          n.x = (x0 + x1) / 2;
+        } else {
+          n.x = Math.max(x0 + n.r, Math.min(x1 - n.r, n.x));
+        }
+        if (y1 - y0 <= 2 * n.r) {
+          n.y = (y0 + y1) / 2;
+        } else {
+          n.y = Math.max(y0 + n.r, Math.min(y1 - n.r, n.y));
+        }
+      }
+      return this;
+    },
+    areaFitRadius: function(maxValue){
+      var o, fill, ref$, ref1$, x0, y0, x1, y1, area, sum, i$, len$, c, r;
+      o = this.dorlingOpt.radius || {};
+      fill = o.fillRatio != null ? o.fillRatio : 0.4;
+      if (!(fill > 0) || !(maxValue > 0) || !this._bounds) {
+        return null;
+      }
+      ref$ = this._bounds, ref1$ = ref$[0], x0 = ref1$[0], y0 = ref1$[1], ref1$ = ref$[1], x1 = ref1$[0], y1 = ref1$[1];
+      area = (x1 - x0) * (y1 - y0);
+      sum = 0;
+      for (i$ = 0, len$ = (ref$ = this.allCountries()).length; i$ < len$; ++i$) {
+        c = ref$[i$];
+        if (c.value > 0) {
+          sum += c.value;
+        }
+      }
+      if (!(area > 0) || !(sum > 0)) {
+        return null;
+      }
+      r = Math.sqrt(fill * area * maxValue / (Math.PI * sum));
+      return Math.min(r, Math.min(x1 - x0, y1 - y0) / 2);
+    },
+    buildRadiusScale: function(){
+      var o, ref$, mn, mx, maxValue, maxR, r;
+      o = this.dorlingOpt.radius || {};
+      if (typeof o === 'function') {
+        return o;
+      }
+      ref$ = this.range(), mn = ref$[0], mx = ref$[1];
+      maxValue = o.maxValue != null
+        ? o.maxValue
+        : mx || 1;
+      maxR = o.max != null
+        ? o.max
+        : this._defaultMaxR;
+      if (o.auto != null ? o.auto : true) {
+        if ((r = this.areaFitRadius(maxValue)) != null) {
+          maxR = o.max != null ? Math.min(o.max, r) : r;
+        }
+      }
+      return d3.scaleSqrt().domain([0, maxValue || 1]).range([0, maxR]);
+    },
+    setupDorling: function(){
+      if (this._dorlingReady) {
+        return;
+      }
+      this._dorlingReady = true;
+      return this.basemapLayer.selectAll('path').data(this.features).enter().append('path').attr('d', this.path).attr('fill', this.dorlingOpt.basemapFill).attr('stroke', this.dorlingOpt.basemapStroke).attr('stroke-width', this.dorlingOpt.basemapStrokeWidth).attr('class', 'pdmap-basemap-country').style('pointer-events', 'none');
+    },
+    updateDorling: function(){
+      var old, nm, nodes, list, i$, ref$, len$, c, v, r, ref1$, gx, gy, prev, node, t, sel, lsel;
+      if (!this._dorlingReady) {
+        return;
+      }
+      this.radiusScale = this.buildRadiusScale();
+      old = this._nodeMap || {};
+      nm = {};
+      nodes = [];
+      list = [];
+      for (i$ = 0, len$ = (ref$ = this.allCountries()).length; i$ < len$; ++i$) {
+        c = ref$[i$];
+        v = c.value;
+        if (!(v != null)) {
+          continue;
+        }
+        r = this.radiusScale(v);
+        if (!(r > 0)) {
+          continue;
+        }
+        ref1$ = c.geocenter, gx = ref1$[0], gy = ref1$[1];
+        if (!(gx != null && gy != null)) {
+          continue;
+        }
+        prev = old[c.num];
+        node = prev != null
+          ? prev
+          : {};
+        node.r = r;
+        node.gx = gx;
+        node.gy = gy;
+        if (!(node.x != null)) {
+          node.x = gx;
+        }
+        if (!(node.y != null)) {
+          node.y = gy;
+        }
+        if (this.dorlingOpt.gravity === 'center') {
+          node.tx = this._center[0];
+          node.ty = this._center[1];
+        } else {
+          node.tx = gx;
+          node.ty = gy;
+        }
+        c._node = node;
+        node.country = c;
+        nm[c.num] = node;
+        nodes.push(node);
+        list.push(c);
+      }
+      this._nodeMap = nm;
+      this._nodes = nodes;
+      t = this.dorlingOpt.transition ? this.dorlingOpt.transition : 0;
+      sel = this.dorlingLayer.selectAll('circle').data(list, function(c){
+        return c.num;
+      });
+      sel.exit().remove();
+      this.circleSel = sel.enter().append('circle').attr('cx', function(c){
+        return c._node.x;
+      }).attr('cy', function(c){
+        return c._node.y;
+      }).attr('r', 0).attr('class', 'pdmap-dorling-circle').merge(sel);
+      this.circleSel.transition().duration(t).attr('r', function(c){
+        return c._node.r;
+      });
+      lsel = this.linkLayer.selectAll('line').data(list, function(c){
+        return c.num;
+      });
+      lsel.exit().remove();
+      this.linkSel = lsel.enter().append('line').attr('class', 'pdmap-link').attr('stroke', this.dorlingOpt.linkStroke).attr('stroke-width', this.dorlingOpt.linkStrokeWidth).style('pointer-events', 'none').merge(lsel);
+      return this.linkSel.attr('x1', function(c){
+        return c._node.x;
+      }).attr('y1', function(c){
+        return c._node.y;
+      }).attr('x2', function(c){
+        return c._node.gx;
+      }).attr('y2', function(c){
+        return c._node.gy;
+      });
+    },
+    startSim: function(){
+      var o;
+      if (!this._nodes) {
+        return;
+      }
+      if (!d3.forceSimulation) {
+        console.warn('pdmap-world: d3.forceSimulation not found; circles stay at geographic centroids.');
+        this._ticked();
+        return;
+      }
+      if (this.sim) {
+        this.sim.stop();
+      }
+      o = this.dorlingOpt;
+      return this.sim = d3.forceSimulation(this._nodes).force('x', d3.forceX(function(d){
+        return d.tx;
+      }).strength(o.strength)).force('y', d3.forceY(function(d){
+        return d.ty;
+      }).strength(o.strength)).force('collide', d3.forceCollide(function(d){
+        return d.r + o.collidePadding;
+      }).strength(0.85).iterations(2)).on('tick', this._ticked).alpha(1).restart();
+    },
+    applyMode: function(animate){
+      var d, t, x$, y$;
+      if (!this.g) {
+        return;
+      }
+      d = this._mode === 'dorling';
+      t = animate && this.dorlingOpt.transition ? this.dorlingOpt.transition : 0;
+      x$ = this.layer;
+      x$.style('pointer-events', d ? 'none' : 'auto');
+      x$.transition().duration(t).style('opacity', d ? 0 : 1);
+      if (this.basemapLayer) {
+        this.basemapLayer.transition().duration(t).style('opacity', d && this.dorlingOpt.basemap ? 1 : 0);
+      }
+      if (this.linkLayer) {
+        this.linkLayer.transition().duration(t).style('opacity', d && this.dorlingOpt.link ? 1 : 0);
+      }
+      if (this.dorlingLayer) {
+        y$ = this.dorlingLayer;
+        y$.style('pointer-events', d ? 'auto' : 'none');
+        y$.transition().duration(t).style('opacity', d ? 1 : 0);
+        return y$;
       }
     }
   });
