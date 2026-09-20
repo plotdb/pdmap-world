@@ -1,4 +1,4 @@
-var $, flush, refitOnSettle, paint, randomData, world, maps, each, repaint, dorlingOpt, results, ok, render, offscreenSvg, opacity, radii, values;
+var $, flush, refitOnSettle, paint, randomData, world, maps, each, repaint, dorlingOpt, results, ok, render, offscreenSvg, rTweenAlive, opacity, radii, values;
 $ = function(s){
   return document.querySelector(s);
 };
@@ -216,6 +216,19 @@ offscreenSvg = function(id){
   document.body.appendChild(box);
   return box.firstChild;
 };
+rTweenAlive = function(el){
+  var t;
+  if (!(t = el.__transition)) {
+    return false;
+  }
+  return Object.keys(t).filter(function(it){
+    return it !== 'active';
+  }).some(function(k){
+    return t[k].tween.some(function(x){
+      return x.name === 'attr.r';
+    });
+  });
+};
 opacity = function(p, cls){
   return parseFloat(d3.select(p.root).select(cls).style('opacity'));
 };
@@ -274,6 +287,21 @@ Promise.resolve().then(function(){
   flush();
   r2 = radii(p).tw;
   ok('set() updates radii in place', 0 < r2 && r2 < rs.tw, r2.toFixed(1) + " < " + rs.tw.toFixed(1));
+  p.set(values);
+  flush();
+  p.setDorlingOption({
+    transition: 300
+  });
+  p.set({
+    tw: values.de,
+    de: values.tw
+  });
+  d3.select(p.root).selectAll('circle').transition().duration(350).attr('fill', '#123456');
+  flush();
+  ok('a host transition on the circles does not cancel the radius update', d3.select(p.root).select('.pdmap-dorling').selectAll('circle').nodes().every(rTweenAlive), d3.select(p.root).select('.pdmap-dorling').selectAll('circle').nodes().filter(rTweenAlive).length + " of " + d3.select(p.root).select('.pdmap-dorling').selectAll('circle').size() + " circles kept it");
+  p.setDorlingOption({
+    transition: 0
+  });
   p.set(values);
   flush();
   p.setDorlingOption({

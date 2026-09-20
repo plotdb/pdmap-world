@@ -2,11 +2,12 @@
 module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5,0,1,0,3,1,0,3,5,3,5,3,0,3,6,0,0,0,0,6,3,3,3,3,4,5,1,5,0,1,3,1,5,5,6,5,3,3,3,1,1,6,2,4,1,1,1,6,4,2,3,3,0,3,0,1,3,1,4,1,5,5,5,4,5,3,6,5,2,1,5,0,1,1,0,0,0,0,1,0,1,3,5,0,0,0,3,0,0,0,0,0,0,3,1,3,3,1,1,1,0,3,3,0,0,3,1,5,3,3,5,1,0,1,1,5,3,3,0,3,4,0,1,5,5,5,5,4,4,4,5,3,3,4,4,1,4,5,4,4,4,0,5,4,6,6,0,4,1,1,3,0,5,0,3,1,0,3,5,3,5,5,5,5,5,5,1,3,0,3,1,3,3,0,1,0,1,3,3,3,1,3,3,3,6,1,3,1,1,0,0,0,3,4,4,5,0,3,0,0,5,4,3,1,1,3,1,1,1,1,3,5,5,3,6,0,6,4,4,0,3],"names":["Asia","Europe","Antarctica","Africa","Oceania","North America","South America"],"zh":["亞洲","歐洲","南極洲","非洲","大洋洲","北美洲","南美洲"]}
 },{}],2:[function(require,module,exports){
 (function(){
-  var meta, topo, continent, ne, dorlingDefaults, tooltipDefaults, tooltipStyle, esc, pdmapWorld;
+  var meta, topo, continent, ne, tn, dorlingDefaults, tooltipDefaults, tooltipStyle, esc, pdmapWorld;
   meta = require("./meta.json");
   topo = require("./topo.json");
   continent = require("./continent.json");
   ne = d3.geoNaturalEarth1Raw;
+  tn = 'pdmap';
   dorlingDefaults = {
     basemap: true,
     gravity: 'centroid',
@@ -559,7 +560,7 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
       }).attr('cy', function(c){
         return c._node.y;
       }).attr('r', 0).attr('class', 'pdmap-dorling-circle').merge(sel);
-      this.circleSel.transition().duration(t).attr('r', function(c){
+      this.circleSel.transition(tn).duration(t).attr('r', function(c){
         return c._node.r;
       });
       lsel = this.linkLayer.selectAll('line').data(list, function(c){
@@ -608,17 +609,17 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
       t = animate && this.dorlingOpt.transition ? this.dorlingOpt.transition : 0;
       x$ = this.layer;
       x$.style('pointer-events', d ? 'none' : 'auto');
-      x$.transition().duration(t).style('opacity', d ? 0 : 1);
+      x$.transition(tn).duration(t).style('opacity', d ? 0 : 1);
       if (this.basemapLayer) {
-        this.basemapLayer.transition().duration(t).style('opacity', d && this.dorlingOpt.basemap ? 1 : 0);
+        this.basemapLayer.transition(tn).duration(t).style('opacity', d && this.dorlingOpt.basemap ? 1 : 0);
       }
       if (this.linkLayer) {
-        this.linkLayer.transition().duration(t).style('opacity', d && this.dorlingOpt.link ? 1 : 0);
+        this.linkLayer.transition(tn).duration(t).style('opacity', d && this.dorlingOpt.link ? 1 : 0);
       }
       if (this.dorlingLayer) {
         y$ = this.dorlingLayer;
         y$.style('pointer-events', d ? 'auto' : 'none');
-        y$.transition().duration(t).style('opacity', d ? 1 : 0);
+        y$.transition(tn).duration(t).style('opacity', d ? 1 : 0);
         return y$;
       }
     }

@@ -1,5 +1,13 @@
 # Change Logs
 
+## v0.0.7
+
+ - fix: dorling radii could stay stale after `set()`. every transition the library owns is now named ( `pdmap` ).
+   d3 cancels a *pending* transition when another one with the same name is scheduled on the element, so a host
+   painting the circles with its own `selectAll('circle').transition().attr('fill', ...)` right after `set()`
+   silently killed the radius transition - leaving `country.value` updated but the rendered `r` stuck at its
+   previous value. Named transitions no longer collide with a host's unnamed ones, in either direction.
+
 ## v0.0.6
 
  - add **Dorling cartogram** mode: countries render as value-scaled circles laid out with `d3-force`.

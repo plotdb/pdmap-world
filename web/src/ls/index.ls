@@ -158,6 +158,13 @@ offscreen-svg = (id) ->
   document.body.appendChild box
   box.firstChild
 
+# is an `attr.r` tween still scheduled on this node, or did something cancel it?
+r-tween-alive = (el) ->
+  if !(t = el.__transition) => return false
+  Object.keys(t)
+    .filter -> it != \active
+    .some (k) -> t[k].tween.some (x) -> x.name == \attr.r
+
 opacity = (p, cls) -> parseFloat d3.select(p.root).select(cls).style(\opacity)
 radii = (p) ->
   o = {}
@@ -205,6 +212,22 @@ Promise.resolve!
     flush!
     r2 = (radii p).tw
     ok 'set() updates radii in place', 0 < r2 < rs.tw, "#{r2.toFixed 1} < #{rs.tw.toFixed 1}"
+    p.set values
+    flush!
+
+    # d3 cancels a *pending* transition when another one with the same name is
+    # scheduled on the element. a host painting the circles with its own
+    # ( unnamed ) transition right after set() would kill the library's radius
+    # transition, leaving the model updated but the rendered radii stale.
+    # only shows up with a non-zero duration, while the radius tween is pending.
+    p.set-dorling-option transition: 300
+    p.set {tw: values.de, de: values.tw}
+    d3.select(p.root).selectAll(\circle).transition!duration(350).attr \fill, \#123456
+    flush!
+    ok 'a host transition on the circles does not cancel the radius update',
+      d3.select(p.root).select(\.pdmap-dorling).selectAll(\circle).nodes!.every(r-tween-alive),
+      "#{d3.select(p.root).select(\.pdmap-dorling).selectAll(\circle).nodes!.filter(r-tween-alive).length} of #{d3.select(p.root).select(\.pdmap-dorling).selectAll(\circle).size!} circles kept it"
+    p.set-dorling-option transition: 0
     p.set values
     flush!
 

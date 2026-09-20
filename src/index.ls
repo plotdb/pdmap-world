@@ -4,6 +4,13 @@ continent = require "./continent.json"
 
 ne = d3.geoNaturalEarth1Raw
 
+# name every transition we own. d3 cancels a *pending* transition when another
+# one with the SAME name is scheduled on the element, so an unnamed transition
+# here would be silently killed by a host doing its own
+# `selectAll('circle').transition().attr('fill', ...)` right after `set()` -
+# leaving the model updated but the radii stuck at their previous value.
+tn = \pdmap
+
 dorling-defaults =
   basemap: true
   gravity: \centroid   # 'centroid' ( toward geographic center ) or 'center' ( toward screen center )
@@ -383,7 +390,7 @@ pdmap-world.prototype = Object.create(Object.prototype) <<< do
       .attr \r, 0
       .attr \class, \pdmap-dorling-circle
       .merge sel
-    @circle-sel.transition!duration(t).attr \r, (c) -> c._node.r
+    @circle-sel.transition(tn).duration(t).attr \r, (c) -> c._node.r
 
     # relation lines from circle center to geographic centroid
     lsel = @link-layer.selectAll(\line).data(list, (c) -> c.num)
@@ -421,15 +428,15 @@ pdmap-world.prototype = Object.create(Object.prototype) <<< do
     t = if animate and @dorling-opt.transition => @dorling-opt.transition else 0
     @layer
       ..style \pointer-events, (if d => \none else \auto)
-      ..transition!duration(t).style \opacity, (if d => 0 else 1)
+      ..transition(tn).duration(t).style \opacity, (if d => 0 else 1)
     if @basemap-layer =>
-      @basemap-layer.transition!duration(t).style \opacity, (if (d and @dorling-opt.basemap) => 1 else 0)
+      @basemap-layer.transition(tn).duration(t).style \opacity, (if (d and @dorling-opt.basemap) => 1 else 0)
     if @link-layer =>
-      @link-layer.transition!duration(t).style \opacity, (if (d and @dorling-opt.link) => 1 else 0)
+      @link-layer.transition(tn).duration(t).style \opacity, (if (d and @dorling-opt.link) => 1 else 0)
     if @dorling-layer =>
       @dorling-layer
         ..style \pointer-events, (if d => \auto else \none)
-        ..transition!duration(t).style \opacity, (if d => 1 else 0)
+        ..transition(tn).duration(t).style \opacity, (if d => 1 else 0)
 
 pdmap-world.country-of-datum = (d) ->
   if !d => return null
