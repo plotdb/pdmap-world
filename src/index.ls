@@ -20,6 +20,28 @@ dorling-defaults =
   # { auto, fill-ratio, max, max-value } or a scale function ( value -> radius )
   radius: {}
 
+tooltip-defaults =
+  enabled: true
+  offset: 12           # px between the cursor and the tip box
+  class: ''            # extra class on the tip node, for styling
+  format: null         # (value, country) -> string
+  accessor: null       # ({evt, data, country}) -> {name, group, value, value-alt} or null
+
+# low specificity on purpose, so a page can restyle the tip with its own rules.
+tooltip-style = '''
+.pdmap-tip {
+  position: fixed; z-index: 2000; pointer-events: none;
+  padding: .35em .6em; border-radius: 3px; white-space: nowrap;
+  background: rgba(0,0,0,.78); color: #fff;
+  font-size: 12px; line-height: 1.4;
+}
+.pdmap-tip-name { font-weight: 600 }
+.pdmap-tip-group, .pdmap-tip-value-alt { opacity: .75 }
+'''
+
+esc = (v) ->
+  "#v".replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
 pdmap-world = (opt = {}) ->
   @root = if typeof(opt.root) == typeof('') => document.querySelector(opt.root) else opt.root
   @ <<< {excludes: opt.excludes or <[Antarctica]>, includes: opt.includes or []}
@@ -27,6 +49,8 @@ pdmap-world = (opt = {}) ->
   @ <<< opt{popup, padding}
   @_mode = opt.mode or \choropleth
   @dorling-opt = {} <<< dorling-defaults <<< (opt.dorling or {})
+  @tooltip-opt = {} <<< tooltip-defaults <<<
+    if typeof(opt.tooltip) == typeof(true) => {enabled: opt.tooltip} else (opt.tooltip or {})
   @projection = d3.geoProjection (x,y) ->
     lat = y * 180 / Math.PI
     lng = x * 180 / Math.PI
@@ -52,11 +76,14 @@ pdmap-world.prototype = Object.create(Object.prototype) <<< do
     {root, popup} = @{root, popup}
     Promise.resolve!
       .then ~>
-        root.addEventListener \mousemove, (e) ->
-          if !(n = e.target) => return
-          if n.nodeType != 1 => return
-          if !(data = d3.select(n).datum!) => return
-          if popup? => popup {evt: e, data}
+        @_on-move = (e) ~>
+          n = e.target
+          data = if n and n.nodeType == 1 => d3.select(n).datum! else null
+          if data and popup? => popup {evt: e, data}
+          @show-tooltip {evt: e, data, country: @country-of-datum data}
+        @_on-leave = ~> @hide-tooltip!
+        root.addEventListener \mousemove, @_on-move
+        root.addEventListener \mouseleave, @_on-leave
         features = topojson.feature(topo, topo.objects["countries"]).features
         features.map (f) ~>
            idx = meta.num.indexOf(f.id)
@@ -146,6 +173,89 @@ pdmap-world.prototype = Object.create(Object.prototype) <<< do
   all-countries: ->
     if @includes.length => @countries.filter ~> it.num in @includes
     else @countries.filter ~> !(it.num in @excludes)
+
+  # ---- tooltip -------------------------------------------------------------
+
+  # choropleth <path> carries the topojson feature while dorling <circle>
+  # carries the country object. this resolves either to the country object.
+  country-of-datum: (d) -> pdmap-world.country-of-datum d
+
+  # merge in / override tooltip options at runtime.
+  set-tooltip-option: (o = {}) ->
+    @tooltip-opt = {} <<< @tooltip-opt <<< o
+    if @tip-node => @tip-node.className = "pdmap-tip #{@tooltip-opt.class or ''}".trim!
+    if !@tooltip-opt.enabled => @hide-tooltip!
+    @
+
+  ensure-tip: ->
+    if @tip-node => return @tip-node
+    if !document.getElementById(\pdmap-world-tip-style) =>
+      node = document.createElement \style
+      node.id = \pdmap-world-tip-style
+      node.textContent = tooltip-style
+      document.head.appendChild node
+    @tip-node = node = document.createElement \div
+    node.className = "pdmap-tip #{@tooltip-opt.class or ''}".trim!
+    node.style.display = \none
+    document.body.appendChild node
+    node
+
+  # what to put in the tip. override wholesale with `tooltip.accessor`.
+  tip-content: (o = {}) ->
+    if @tooltip-opt.accessor => return @tooltip-opt.accessor o
+    if !(c = o.country) => return null
+    fmt = @tooltip-opt.format or (v) ->
+      if !(v?) => '-'
+      else if typeof(v) != \number or isNaN(v) => "#v"
+      else if d3.format => d3.format(',')(v)
+      else "#v"
+    # `shortname` is the presentable one ( "United States" ), `name` is the full
+    # lowercase ISO label ( "united states of america (the)" ).
+    {name: (c.shortname or c.name or c.alpha3 or ''), value: fmt(c.value, c)}
+
+  show-tooltip: (o = {}) ->
+    if !@tooltip-opt.enabled => return @hide-tooltip!
+    if !(content = @tip-content o) => return @hide-tooltip!
+    node = @ensure-tip!
+    html = ''
+    if content.name? => html += "<div class=\"pdmap-tip-name\">#{esc content.name}</div>"
+    if content.group => html += "<div class=\"pdmap-tip-group\">#{esc content.group}</div>"
+    if content.value? =>
+      alt = if content.value-alt =>
+        " <span class=\"pdmap-tip-value-alt\">#{esc content.value-alt}</span>"
+      else ''
+      html += "<div class=\"pdmap-tip-value\">#{esc content.value}#{alt}</div>"
+    node.innerHTML = html
+    node.style.display = \block
+    @place-tooltip o.evt
+    @
+
+  # follow the cursor, flipping to the other side near a viewport edge.
+  place-tooltip: (evt) ->
+    if !(@tip-node and evt and evt.client-x?) => return @
+    box = @tip-node.getBoundingClientRect!
+    gap = @tooltip-opt.offset
+    x = evt.client-x + gap
+    y = evt.client-y + gap
+    if x + box.width > window.innerWidth => x = evt.client-x - gap - box.width
+    if y + box.height > window.innerHeight => y = evt.client-y - gap - box.height
+    @tip-node.style.left = "#{Math.max 0, x}px"
+    @tip-node.style.top = "#{Math.max 0, y}px"
+    @
+
+  hide-tooltip: ->
+    if @tip-node => @tip-node.style.display = \none
+    @
+
+  # drop everything this map attached outside its own root.
+  destroy: ->
+    if @sim => @sim.stop!
+    if @root and @_on-move =>
+      @root.removeEventListener \mousemove, @_on-move
+      @root.removeEventListener \mouseleave, @_on-leave
+    if @tip-node and @tip-node.parentNode => @tip-node.parentNode.removeChild @tip-node
+    @tip-node = null
+    @
 
   # ---- Dorling cartogram ---------------------------------------------------
 
@@ -320,6 +430,11 @@ pdmap-world.prototype = Object.create(Object.prototype) <<< do
       @dorling-layer
         ..style \pointer-events, (if d => \auto else \none)
         ..transition!duration(t).style \opacity, (if d => 1 else 0)
+
+pdmap-world.country-of-datum = (d) ->
+  if !d => return null
+  c = if d.properties? => d.properties else d
+  if c and c.num? => c else null
 
 pdmap-world.continent-of = (name) ->
   for n in pdmap-world.nametypes =>

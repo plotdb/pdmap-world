@@ -54,6 +54,45 @@ country paths will be added under a SVG `g` element with `pdmap-world` class. pd
  - `findCountry(n)`: return a country object according to country identifier `n` ( see below )
  - `mode([m][, {animate}])`: with no argument, returns the current mode; with `'dorling'` or `'choropleth'`, switches mode ( transition unless `{animate:false}` ).
  - `setDorlingOption(opt)`: merge/override dorling options at runtime and refresh ( e.g. toggle `basemap` / `gravity` / `link` ).
+ - `setTooltipOption(opt)`: merge/override tooltip options at runtime ( e.g. `{enabled: false}` ).
+ - `countryOfDatum(d)`: resolve a d3 datum to its country object, whichever mode it came from. Also available as `pdmapWorld.countryOfDatum(d)`.
+ - `destroy()`: stop the force layout and detach the listeners and tooltip node this map added outside its root.
+
+
+## Tooltip
+
+Hovering a country shows a tooltip with its name and value. It is on by default;
+pass `{tooltip: false}` to turn it off, or an object to configure it:
+
+    p = new pdmapWorld({ root: "#root", tooltip: { offset: 16 } })
+
+ - `enabled` ( default `true` ).
+ - `offset` ( default `12` ): px between the cursor and the tip box. The box flips to the other side near a viewport edge.
+ - `class`: extra class on the tip node, for styling.
+ - `format`: `(value, country) -> string` for the value line. Defaults to `d3.format(',')`.
+ - `accessor`: `({evt, data, country}) -> {name, group, value, valueAlt}` to build the content yourself. Return `null` to show nothing for that target.
+
+The tip node is a `div.pdmap-tip` on `document.body` holding `.pdmap-tip-name`,
+`.pdmap-tip-group` and `.pdmap-tip-value` ( with an optional
+`.pdmap-tip-value-alt` inside ). A default stylesheet is injected once, at low
+specificity, so your own rules win.
+
+The separate `popup` option is untouched: it still gets `{evt, data}` with the
+raw datum on every hover.
+
+
+## Datum per mode
+
+Choropleth `<path>` carries the topojson feature while dorling `<circle>`
+carries the country object, so an accessor that has to work in both modes should
+go through `countryOfDatum`:
+
+    d3.select(p.root).selectAll("path, circle")
+      .attr("fill", function (d) {
+        var c = pdmapWorld.countryOfDatum(d);
+        return (c && c.value != null) ? scale(c.value) : "#eee";
+      })
+
 
 ## Dorling cartogram
 

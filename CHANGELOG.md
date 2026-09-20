@@ -8,8 +8,13 @@
    - circle sizing adapts to the space available: `radius.auto` ( default on ) picks the largest radius so the circles cover `radius.fillRatio` ( default `0.4` ) of the map bounding box, with `radius.max` demoted to an upper-bound hint. `radius.fillRatio` is the overlap-vs-crowding knob.
    - `bounds` ( default `true` ) keeps circles inside the map bounding box.
    - `setDorlingOption(opt)` to toggle switches at runtime; `mode()` (no arg) returns current mode.
-   - dorling circles carry the country object as their datum while choropleth paths still carry the topojson feature.
+   - dorling circles carry the country object as their datum while choropleth paths still carry the topojson feature - use `countryOfDatum(d)` for an accessor that works in both modes.
    - uses global `d3` (v7 bundles d3-force) and `topojson`; no new dependencies.
+ - add a built-in **tooltip**: hovering a country shows its name and value, in either mode.
+   - `tooltip` option group: `enabled` ( default on ), `offset`, `class`, `format`, and `accessor` for full control of the content; `setTooltipOption(opt)` to change it at runtime.
+   - renders a `div.pdmap-tip` on `document.body` with a low-specificity default stylesheet injected once, so page CSS wins.
+   - the existing `popup` hook is unchanged.
+ - add `countryOfDatum(d)` ( also a static ) to resolve either mode's datum to the country object, and `destroy()` to detach listeners, the tooltip node and the force layout.
  - internal: country polygons moved into a `g.pdmap-choropleth` layer; new sibling layers `g.pdmap-basemap`, `g.pdmap-links`, `g.pdmap-dorling`.
 
 ## v0.0.5

@@ -2,7 +2,7 @@
 module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5,0,1,0,3,1,0,3,5,3,5,3,0,3,6,0,0,0,0,6,3,3,3,3,4,5,1,5,0,1,3,1,5,5,6,5,3,3,3,1,1,6,2,4,1,1,1,6,4,2,3,3,0,3,0,1,3,1,4,1,5,5,5,4,5,3,6,5,2,1,5,0,1,1,0,0,0,0,1,0,1,3,5,0,0,0,3,0,0,0,0,0,0,3,1,3,3,1,1,1,0,3,3,0,0,3,1,5,3,3,5,1,0,1,1,5,3,3,0,3,4,0,1,5,5,5,5,4,4,4,5,3,3,4,4,1,4,5,4,4,4,0,5,4,6,6,0,4,1,1,3,0,5,0,3,1,0,3,5,3,5,5,5,5,5,5,1,3,0,3,1,3,3,0,1,0,1,3,3,3,1,3,3,3,6,1,3,1,1,0,0,0,3,4,4,5,0,3,0,0,5,4,3,1,1,3,1,1,1,1,3,5,5,3,6,0,6,4,4,0,3],"names":["Asia","Europe","Antarctica","Africa","Oceania","North America","South America"],"zh":["亞洲","歐洲","南極洲","非洲","大洋洲","北美洲","南美洲"]}
 },{}],2:[function(require,module,exports){
 (function(){
-  var meta, topo, continent, ne, dorlingDefaults, pdmapWorld;
+  var meta, topo, continent, ne, dorlingDefaults, tooltipDefaults, tooltipStyle, esc, pdmapWorld;
   meta = require("./meta.json");
   topo = require("./topo.json");
   continent = require("./continent.json");
@@ -22,6 +22,17 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
     bounds: true,
     radius: {}
   };
+  tooltipDefaults = {
+    enabled: true,
+    offset: 12,
+    'class': '',
+    format: null,
+    accessor: null
+  };
+  tooltipStyle = '.pdmap-tip {\n  position: fixed; z-index: 2000; pointer-events: none;\n  padding: .35em .6em; border-radius: 3px; white-space: nowrap;\n  background: rgba(0,0,0,.78); color: #fff;\n  font-size: 12px; line-height: 1.4;\n}\n.pdmap-tip-name { font-weight: 600 }\n.pdmap-tip-group, .pdmap-tip-value-alt { opacity: .75 }';
+  esc = function(v){
+    return (v + "").replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  };
   pdmapWorld = function(opt){
     opt == null && (opt = {});
     this.root = typeof opt.root === typeof ''
@@ -37,6 +48,11 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
     this.padding = opt.padding;
     this._mode = opt.mode || 'choropleth';
     this.dorlingOpt = import$(import$({}, dorlingDefaults), opt.dorling || {});
+    this.tooltipOpt = import$(import$({}, tooltipDefaults), typeof opt.tooltip === typeof true
+      ? {
+        enabled: opt.tooltip
+      }
+      : opt.tooltip || {});
     this.projection = d3.geoProjection(function(x, y){
       var lat, lng;
       lat = y * 180 / Math.PI;
@@ -84,24 +100,27 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
       }, root = ref$.root, popup = ref$.popup;
       return Promise.resolve().then(function(){
         var features, path, node, x$, y$, b, ref$, bw, bh;
-        root.addEventListener('mousemove', function(e){
+        this$._onMove = function(e){
           var n, data;
-          if (!(n = e.target)) {
-            return;
-          }
-          if (n.nodeType !== 1) {
-            return;
-          }
-          if (!(data = d3.select(n).datum())) {
-            return;
-          }
-          if (popup != null) {
-            return popup({
+          n = e.target;
+          data = n && n.nodeType === 1 ? d3.select(n).datum() : null;
+          if (data && popup != null) {
+            popup({
               evt: e,
               data: data
             });
           }
-        });
+          return this$.showTooltip({
+            evt: e,
+            data: data,
+            country: this$.countryOfDatum(data)
+          });
+        };
+        this$._onLeave = function(){
+          return this$.hideTooltip();
+        };
+        root.addEventListener('mousemove', this$._onMove);
+        root.addEventListener('mouseleave', this$._onLeave);
         features = topojson.feature(topo, topo.objects["countries"]).features;
         features.map(function(f){
           var idx, obj;
@@ -249,6 +268,127 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
           return !in$(it.num, this$.excludes);
         });
       }
+    },
+    countryOfDatum: function(d){
+      return pdmapWorld.countryOfDatum(d);
+    },
+    setTooltipOption: function(o){
+      o == null && (o = {});
+      this.tooltipOpt = import$(import$({}, this.tooltipOpt), o);
+      if (this.tipNode) {
+        this.tipNode.className = ("pdmap-tip " + (this.tooltipOpt['class'] || '')).trim();
+      }
+      if (!this.tooltipOpt.enabled) {
+        this.hideTooltip();
+      }
+      return this;
+    },
+    ensureTip: function(){
+      var node;
+      if (this.tipNode) {
+        return this.tipNode;
+      }
+      if (!document.getElementById('pdmap-world-tip-style')) {
+        node = document.createElement('style');
+        node.id = 'pdmap-world-tip-style';
+        node.textContent = tooltipStyle;
+        document.head.appendChild(node);
+      }
+      this.tipNode = node = document.createElement('div');
+      node.className = ("pdmap-tip " + (this.tooltipOpt['class'] || '')).trim();
+      node.style.display = 'none';
+      document.body.appendChild(node);
+      return node;
+    },
+    tipContent: function(o){
+      var c, fmt;
+      o == null && (o = {});
+      if (this.tooltipOpt.accessor) {
+        return this.tooltipOpt.accessor(o);
+      }
+      if (!(c = o.country)) {
+        return null;
+      }
+      fmt = this.tooltipOpt.format || function(v){
+        if (!(v != null)) {
+          return '-';
+        } else if (typeof v !== 'number' || isNaN(v)) {
+          return v + "";
+        } else if (d3.format) {
+          return d3.format(',')(v);
+        } else {
+          return v + "";
+        }
+      };
+      return {
+        name: c.shortname || c.name || c.alpha3 || '',
+        value: fmt(c.value, c)
+      };
+    },
+    showTooltip: function(o){
+      var content, node, html, alt;
+      o == null && (o = {});
+      if (!this.tooltipOpt.enabled) {
+        return this.hideTooltip();
+      }
+      if (!(content = this.tipContent(o))) {
+        return this.hideTooltip();
+      }
+      node = this.ensureTip();
+      html = '';
+      if (content.name != null) {
+        html += "<div class=\"pdmap-tip-name\">" + esc(content.name) + "</div>";
+      }
+      if (content.group) {
+        html += "<div class=\"pdmap-tip-group\">" + esc(content.group) + "</div>";
+      }
+      if (content.value != null) {
+        alt = content.valueAlt ? " <span class=\"pdmap-tip-value-alt\">" + esc(content.valueAlt) + "</span>" : '';
+        html += "<div class=\"pdmap-tip-value\">" + esc(content.value) + alt + "</div>";
+      }
+      node.innerHTML = html;
+      node.style.display = 'block';
+      this.placeTooltip(o.evt);
+      return this;
+    },
+    placeTooltip: function(evt){
+      var box, gap, x, y;
+      if (!(this.tipNode && evt && evt.clientX != null)) {
+        return this;
+      }
+      box = this.tipNode.getBoundingClientRect();
+      gap = this.tooltipOpt.offset;
+      x = evt.clientX + gap;
+      y = evt.clientY + gap;
+      if (x + box.width > window.innerWidth) {
+        x = evt.clientX - gap - box.width;
+      }
+      if (y + box.height > window.innerHeight) {
+        y = evt.clientY - gap - box.height;
+      }
+      this.tipNode.style.left = Math.max(0, x) + "px";
+      this.tipNode.style.top = Math.max(0, y) + "px";
+      return this;
+    },
+    hideTooltip: function(){
+      if (this.tipNode) {
+        this.tipNode.style.display = 'none';
+      }
+      return this;
+    },
+    destroy: function(){
+      if (this.sim) {
+        this.sim.stop();
+      }
+      if (this.root && this._onMove) {
+        this.root.removeEventListener('mousemove', this._onMove);
+        this.root.removeEventListener('mouseleave', this._onLeave);
+      }
+      if (this.tipNode && this.tipNode.parentNode) {
+        this.tipNode.parentNode.removeChild(this.tipNode);
+      }
+      this.tipNode = null;
+      return this;
     },
     mode: function(m, opt){
       var animate;
@@ -483,6 +623,18 @@ module.exports={"map":[0,1,2,3,4,1,3,5,0,6,4,1,5,0,0,0,5,1,5,0,6,1,3,2,6,5,0,4,5
       }
     }
   });
+  pdmapWorld.countryOfDatum = function(d){
+    var c;
+    if (!d) {
+      return null;
+    }
+    c = d.properties != null ? d.properties : d;
+    if (c && c.num != null) {
+      return c;
+    } else {
+      return null;
+    }
+  };
   pdmapWorld.continentOf = function(name){
     var i$, ref$, len$, n, idx;
     for (i$ = 0, len$ = (ref$ = pdmapWorld.nametypes).length; i$ < len$; ++i$) {
