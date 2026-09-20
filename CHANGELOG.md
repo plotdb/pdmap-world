@@ -2,7 +2,7 @@
 
 ## v0.0.7
 
- - fix: dorling radii could stay stale after `set()`. every transition the library owns is now named ( `pdmap` ).
+ - fix: dorling radii could stay stale after `set()` **when the host runs its own transition on the circles**. every transition the library owns is now named ( `pdmap` ).
    d3 cancels a *pending* transition when another one with the same name is scheduled on the element, so a host
    painting the circles with its own `selectAll('circle').transition().attr('fill', ...)` right after `set()`
    silently killed the radius transition - leaving `country.value` updated but the rendered `r` stuck at its
